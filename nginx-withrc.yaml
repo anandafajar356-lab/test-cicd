@@ -22,6 +22,7 @@ spec:
       containers:
         - name: nginx-withrsnew
           image: saintshiro16/my-nginx-site:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
           readinessProbe:

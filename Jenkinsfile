@@ -23,6 +23,7 @@ pipeline {
                 // This is the standard way with the Kubernetes CLI plugin
                 withKubeConfig([credentialsId: "${KUBECONFIG_CRED_ID}"]) {
                     sh "kubectl apply -f nginx-withrc.yaml --namespace it"
+                    sh "kubectl rollout restart deployment nginx-rs --namespace it"
                 }
             }
         }
