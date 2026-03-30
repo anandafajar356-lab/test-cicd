@@ -1,10 +1,5 @@
 pipeline {
     agent any
-    environment {
-        DOCKER_USERNAME = "${DOCKER_USERNAME}"
-        DOCKER_HUB_REPO = 'my-nginx-site'
-        KUBECONFIG_CRED_ID = "${KUBECONFIG_CRED_ID}" // The ID of the secret you'll create in Step 4
-    }
     stages {
         stage('Checkout') {
             steps {
