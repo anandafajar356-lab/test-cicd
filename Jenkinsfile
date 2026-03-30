@@ -1,9 +1,9 @@
 pipeline {
     agent any
     environment {
-        DOCKER_USERNAME = '${DOCKER_USERNAME}'
+        DOCKER_USERNAME = "${DOCKER_USERNAME}"
         DOCKER_HUB_REPO = 'my-nginx-site'
-        KUBECONFIG_CRED_ID = '${KUBECONFIG_CRED_ID}' // The ID of the secret you'll create in Step 4
+        KUBECONFIG_CRED_ID = "${KUBECONFIG_CRED_ID}" // The ID of the secret you'll create in Step 4
     }
     stages {
         stage('Checkout') {
@@ -25,9 +25,9 @@ pipeline {
         }
         stage('Deploy to MicroK8s') {
             steps {
-                // This uses the Kubernetes CLI plugin
-                configFileProvider([configFile(fileId: "${KUBECONFIG_CRED_ID}", variable: 'KUBECONFIG')]) {
-                    sh "kubectl apply -f nginx-withrc.yaml --namespace it --kubeconfig=${KUBECONFIG}"
+                // This is the standard way with the Kubernetes CLI plugin
+                withKubeConfig([credentialsId: "${KUBECONFIG_CRED_ID}"]) {
+                    sh "kubectl apply -f nginx-withrc.yaml --namespace it"
                 }
             }
         }
