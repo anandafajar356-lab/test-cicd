@@ -1,27 +1,34 @@
 pipeline {
     agent any
+
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
+
         stage('Build & Push Image') {
             steps {
-                script {
-                    // This uses Jenkins Docker Pipeline plugin
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials-id') {
-                        def myImage = docker.build("${DOCKER_USERNAME}/${DOCKER_HUB_REPO}:${env.BUILD_NUMBER}")
-                        myImage.push()
-                        myImage.push("latest")
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                    # 1. Login menggunakan binary docker di jenkins_home
+                    echo "\$DOCKER_PASS" | /var/jenkins_home/docker login -u "\$DOCKER_USER" --password-stdin
+
+                    # 2. Build Image
+                    /var/jenkins_home/docker build -t ${env.DOCKER_USERNAME}/${env.DOCKER_HUB_REPO}:${env.BUILD_NUMBER} -t ${env.DOCKER_USERNAME}/${env.DOCKER_HUB_REPO}:latest .
+
+                    # 3. Push Image ke Docker Hub
+                    /var/jenkins_home/docker push ${env.DOCKER_USERNAME}/${env.DOCKER_HUB_REPO}:${env.BUILD_NUMBER}
+                    /var/jenkins_home/docker push ${env.DOCKER_USERNAME}/${env.DOCKER_HUB_REPO}:latest
+                    """
                 }
             }
         }
-        stage('Deploy to MicroK8s') {
+
+        stage('Deploy to K8s') {
             steps {
-                // This is the standard way with the Kubernetes CLI plugin
-                withKubeConfig([credentialsId: "${KUBECONFIG_CRED_ID}"]) {
+                withKubeConfig([credentialsId: 'kubeconfig-k8s']) {
                     sh "kubectl apply -f nginx-withrc.yaml --namespace it"
                     sh "kubectl rollout restart deployment nginx-rs --namespace it"
                 }
