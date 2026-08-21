@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: nginx-withrsnew
-          image: saintshiro16/my-nginx-site:f437049
+          image: saintshiro16/my-nginx-site:8426cc0
           imagePullPolicy: Always
           ports:
             - containerPort: 80
