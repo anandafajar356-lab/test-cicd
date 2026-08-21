@@ -1,14 +1,19 @@
-name: Build and Push to Docker Hub
+name: CI Build, Push & Auto Update Tag
 
 on:
   push:
-    branches: [ "main" ] # Triggers whenever you push to main
+    branches: [ "main" ]
+    paths-ignore:
+      - 'nginx-withrc.yaml'
+      - 'README.md'
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Login to Docker Hub
@@ -17,10 +22,25 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push
+      - name: Generate Short SHA Tag
+        id: vars
+        run: echo "SHA_SHORT=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          # Replace 'fajar' with your actual Docker Hub username
-          tags: ${{ secrets.DOCKER_USERNAME }}/my-nginx-site:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/my-nginx-site:${{ env.SHA_SHORT }}
+
+      - name: Update Kubernetes Manifest
+        run: |
+          sed -i -E "s|image: .*/my-nginx-site:.*|image: ${{ secrets.DOCKER_USERNAME }}/my-nginx-site:${{ env.SHA_SHORT }}|g" nginx-withrc.yaml
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add nginx-withrc.yaml
+          git commit -m "chore(gitops): update image tag to ${SHA_SHORT} [skip ci]" || exit 0
+          git push origin main
