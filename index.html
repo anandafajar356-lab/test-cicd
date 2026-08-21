@@ -1,13 +1,33 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>My Nginx Site</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; margin-top: 50px; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ananda Fajar - Junior Technical Support</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>NGINX V.2</h1>
-    <p>Test update.</p>
+
+    <div class="card">
+        <div class="avatar">AF</div>
+        <h1>Ananda Fajar</h1>
+        <div class="role">Junior Technical Support</div>
+        <div class="company">Arupa Cloud Nusantara</div>
+
+        <div class="badge-container">
+            <span class="badge">Cloud Infrastructure</span>
+            <span class="badge">Kubernetes</span>
+            <span class="badge">GitOps & CI/CD</span>
+            <span class="badge">Linux</span>
+        </div>
+
+        <button class="btn" id="pingBtn">Ping Status</button>
+
+        <div class="status-box" id="statusOutput">
+            System status: Operational | Ready
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
