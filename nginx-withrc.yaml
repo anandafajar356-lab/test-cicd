@@ -7,11 +7,46 @@ data:
   default.conf: |
     server_names_hash_bucket_size 128;
 
+    # ── Rate limiting zone (context http, valid di sini karena
+    #    default.conf di-include di dalam block http oleh nginx.conf bawaan) ──
+    # 10r/s per IP, burst 20 -> cukup longgar untuk user asli,
+    # tapi bikin scanner/bot (feroxbuster dkk) langsung kena limit.
+    limit_req_zone $binary_remote_addr zone=general_limit:10m rate=10r/s;
+    limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+    limit_req_status 429;
+    limit_conn_status 429;
+
     server {
         listen 80;
         server_name app.6cfc738b-ced1-4334-8cd1-cfa279e71cda.k8s.civo.com;
 
+        # Batasi koneksi simultan per IP
+        limit_conn conn_limit 20;
+
+        # ── Blokir file/folder sensitif ──
+        # Ditaruh SEBELUM location / supaya jelas dibaca,
+        # meski secara matching nginx regex location tetap
+        # override prefix location / walau ditaruh di bawah.
+        location ~ /\.(git|github|env) {
+            deny all;
+            return 404;
+        }
+
+        location ~* \.(ya?ml|md)$ {
+            deny all;
+            return 404;
+        }
+
+        location = /Dockerfile {
+            deny all;
+            return 404;
+        }
+
         location / {
+            # Rate limit request umum
+            limit_req zone=general_limit burst=20 nodelay;
+
+            # Paksa HTTPS (kalau request belum lewat TLS di edge/Traefik)
             if ($http_x_forwarded_proto != "https") {
                 return 301 https://$host$request_uri;
             }
@@ -22,7 +57,8 @@ data:
         }
     }
 
-    # Catch-all: Jika akses lewat IP Public langsung -> redirect ke domain HTTPS
+    # Catch-all: kalau ada yang akses lewat IP publik langsung
+    # (Host header tidak cocok server_name di atas) -> redirect ke domain resmi.
     server {
         listen 80 default_server;
         server_name _;
@@ -93,6 +129,25 @@ spec:
 
 ---
 
+# ── Rate limit tambahan di level Traefik (edge), sebelum request
+#    sampai ke pod. Lebih efisien buat nahan scan storm / DDoS ringan
+#    dibanding cuma andelin limit_req di nginx.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: rate-limit
+  namespace: it
+spec:
+  rateLimit:
+    average: 10
+    burst: 20
+    period: 1s
+    sourceCriterion:
+      ipStrategy:
+        depth: 1   # sesuaikan kalau ada proxy/LB lain di depan Traefik
+
+---
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -101,6 +156,7 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: it-rate-limit@kubernetescrd
 spec:
   tls:
     - hosts:
@@ -109,15 +165,6 @@ spec:
   rules:
     - host: app.6cfc738b-ced1-4334-8cd1-cfa279e71cda.k8s.civo.com
       http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: service-nginx
-                port:
-                  number: 80
-    - http:
         paths:
           - path: /
             pathType: Prefix
