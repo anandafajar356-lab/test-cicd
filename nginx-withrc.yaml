@@ -100,6 +100,8 @@ spec:
               httpHeaders:
                 - name: X-Forwarded-Proto
                   value: https
+                - name: Host
+                  value: app.6cfc738b-ced1-4334-8cd1-cfa279e71cda.k8s.civo.com
             initialDelaySeconds: 2
             periodSeconds: 5
           volumeMounts:
