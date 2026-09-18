@@ -93,6 +93,13 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 80
+          resources:
+            requests:
+              memory: "8Mi"
+              cpu: "1m"
+            limits:
+              memory: "16Mi"
+              cpu: "4m"  
           readinessProbe:
             httpGet:
               path: /
@@ -112,13 +119,6 @@ spec:
         - name: nginx-conf
           configMap:
             name: nginx-redirect-config
-          resources:
-            requests:
-              memory: "8Mi"
-              cpu: "1m"
-            limits:
-              memory: "16Mi"
-              cpu: "4m"  
 
 
 ---
