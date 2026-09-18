@@ -113,11 +113,11 @@ spec:
           configMap:
             name: nginx-redirect-config
           resources:
-            request:
-              memory: "8mi"
+            requests:
+              memory: "8Mi"
               cpu: "1m"
-            limit:
-              memory: "16mi"
+            limits:
+              memory: "16Mi"
               cpu: "4m"  
 
 
