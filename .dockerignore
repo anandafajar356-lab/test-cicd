@@ -1,0 +1,8 @@
+.git
+.github
+.dockerignore
+Dockerfile
+nginx-withrc.yaml
+*.yml
+*.yaml
+README.md
