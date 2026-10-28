@@ -104,6 +104,10 @@ spec:
           labelSelector:
             matchLabels:
               app: nginx-withrsnew
+          # Hitung sebaran per ReplicaSet saja, jadi pod dari revisi lama
+          # tidak ikut dihitung saat rolling update.
+          matchLabelKeys:
+            - pod-template-hash
       terminationGracePeriodSeconds: 30
       containers:
         - name: nginx-withrsnew
