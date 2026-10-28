@@ -82,24 +82,44 @@ spec:
   selector:
     matchLabels:
       app: nginx-withrsnew
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: nginx-withrsnew
     spec:
+      # Sebar pod: maksimal selisih 1 pod antar node.
+      # 3 replika di 3 node -> 1-1-1 (saat rolling update boleh sementara 2-1-1).
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          # Node yang NotReady/tainted tidak dihitung sebagai domain,
+          # jadi pod pengganti tetap bisa dijadwalkan ke 2 node yang sehat.
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: nginx-withrsnew
+      terminationGracePeriodSeconds: 30
       containers:
         - name: nginx-withrsnew
           image: saintshiro16/my-nginx-site:f5474a4
-          imagePullPolicy: Always
+          # Tag berbasis commit sifatnya immutable -> IfNotPresent cukup,
+          # pod tidak bergantung pada registry saat restart/reschedule.
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
           resources:
             requests:
-              memory: "8Mi"
-              cpu: "1m"
+              memory: "32Mi"
+              cpu: "50m"
             limits:
-              memory: "16Mi"
-              cpu: "4m"  
+              memory: "64Mi"
+              cpu: "200m"
           readinessProbe:
             httpGet:
               path: /
@@ -111,6 +131,26 @@ spec:
                   value: app.6cfc738b-ced1-4334-8cd1-cfa279e71cda.k8s.civo.com
             initialDelaySeconds: 2
             periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+              httpHeaders:
+                - name: X-Forwarded-Proto
+                  value: https
+                - name: Host
+                  value: app.6cfc738b-ced1-4334-8cd1-cfa279e71cda.k8s.civo.com
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                # Beri waktu endpoint dicabut dari Service/Ingress sebelum nginx berhenti
+                command: ["sh", "-c", "sleep 5"]
           volumeMounts:
             - name: nginx-conf
               mountPath: /etc/nginx/conf.d/default.conf
@@ -120,6 +160,19 @@ spec:
           configMap:
             name: nginx-redirect-config
 
+---
+
+# Pastikan node drain / upgrade node tidak mencabut lebih dari 1 pod sekaligus
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nginx-rs
+  namespace: it
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: nginx-withrsnew
 
 ---
 
