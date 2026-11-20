@@ -92,7 +92,7 @@ spec:
       labels:
         app: nginx-withrsnew
     spec:
-      # Sebar pod: maksimal selisih 1 pod antar node.
+      # Sebar pod: maksimal selisih 1 pod antar node, testing
       # 3 replika di 3 node -> 1-1-1 (saat rolling update boleh sementara 2-1-1).
       topologySpreadConstraints:
         - maxSkew: 1
