@@ -111,7 +111,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: nginx-withrsnew
-          image: saintshiro16/my-nginx-site:f5474a4
+          image: saintshiro16/my-nginx-site:e324ec6
           # Tag berbasis commit sifatnya immutable -> IfNotPresent cukup,
           # pod tidak bergantung pada registry saat restart/reschedule.
           imagePullPolicy: IfNotPresent
